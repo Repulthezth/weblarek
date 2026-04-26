@@ -1,10 +1,10 @@
 import type { IBuyer, IBuyerErrors, TPayment } from '../types';
 
 export class Buyer {
-    private payment: TPayment | '' = '';
-    private email = '';
-    private phone = '';
-    private address = '';
+    protected payment: TPayment | '' = '';
+    protected email = '';
+    protected phone = '';
+    protected address = '';
 
     constructor() {}
 
