@@ -1,6 +1,6 @@
 export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 
-export type TPayment = 'card' | 'cash' | '';
+export type TPayment = 'card' | 'cash';
 
 export interface IProduct {
     id: string;
@@ -12,11 +12,13 @@ export interface IProduct {
 }
 
 export interface IBuyer {
-    payment: TPayment;
+    payment: TPayment | '';
     email: string;
     phone: string;
     address: string;
 }
+
+export type IBuyerErrors = Partial<Record<keyof IBuyer, string>>;
 
 export interface IProductsResponse {
     total: number;
@@ -24,13 +26,17 @@ export interface IProductsResponse {
 }
 
 export interface IOrderRequest {
-    buyer: IBuyer;
-    items: IProduct[];
+    payment: TPayment | '';
+    email: string;
+    phone: string;
+    address: string;
+    total: number;
+    items: string[];
 }
 
 export interface IOrderResponse {
-    orderId: string;
-    amount: number;
+    id: string;
+    total: number;
 }
 
 export interface IApi {
