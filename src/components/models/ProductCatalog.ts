@@ -1,5 +1,5 @@
-import type { IProduct } from '../types';
-import type { IEvents } from '../components/base/Events';
+import type { IProduct } from '../../types';
+import type { IEvents } from '../base/Events';
 
 export class ProductCatalog {
     protected products: IProduct[] = [];

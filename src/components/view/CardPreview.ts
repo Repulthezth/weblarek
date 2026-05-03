@@ -6,7 +6,8 @@ export interface ICardPreviewData extends ICardData {
     category: string;
     image: string;
     description: string;
-    inCart: boolean;
+    buttonDisabled: boolean;
+    buttonText: string;
 }
 
 export type TCardPreviewActions = {
@@ -45,19 +46,12 @@ export class CardPreview extends Card<ICardPreviewData> {
         this._description.textContent = value;
     }
 
-    // Переопределяем price: при null блокируем кнопку и ставим «Недоступно»
-    set price(value: number | null) {
-        this._price.textContent = value !== null ? `${value} синапсов` : 'Бесценно';
-        this._button.disabled = value === null;
-        if (value === null) {
-            this._button.textContent = 'Недоступно';
-        }
+    set buttonDisabled(value: boolean) {
+        this._button.disabled = value;
     }
 
-    // Меняем текст только если кнопка не заблокирована (цена задана)
-    set inCart(value: boolean) {
-        if (!this._button.disabled) {
-            this._button.textContent = value ? 'Удалить из корзины' : 'В корзину';
-        }
+    set buttonText(value: string) {
+        this._button.textContent = value;
     }
+
 }
