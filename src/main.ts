@@ -21,18 +21,22 @@ import { OrderSuccess } from './components/view/OrderSuccess';
 import { API_URL, CDN_URL } from './utils/constants';
 import { cloneTemplate, ensureElement } from './utils/utils';
 
+// ---- Инфраструктура ----
 const events = new EventEmitter();
 const api = new Api(API_URL);
 const communication = new CommunicationLayer(api);
 
+// ---- Модели данных ----
 const catalogModel = new ProductCatalog(events);
 const cartModel = new Cart(events);
 const buyerModel = new Buyer(events);
 
+// ---- Корневые DOM-элементы ----
 const headerElement = ensureElement<HTMLElement>('.header');
 const galleryElement = ensureElement<HTMLElement>('.gallery');
 const modalContainer = ensureElement<HTMLElement>('#modal-container');
 
+// ---- Шаблоны ----
 const cardCatalogTemplate = ensureElement<HTMLTemplateElement>('#card-catalog');
 const cardPreviewTemplate = ensureElement<HTMLTemplateElement>('#card-preview');
 const cardBasketTemplate = ensureElement<HTMLTemplateElement>('#card-basket');
@@ -41,6 +45,7 @@ const orderTemplate = ensureElement<HTMLTemplateElement>('#order');
 const contactsTemplate = ensureElement<HTMLTemplateElement>('#contacts');
 const successTemplate = ensureElement<HTMLTemplateElement>('#success');
 
+// ---- Компоненты представления ----
 const header = new Header(headerElement, events);
 const catalog = new Catalog(galleryElement);
 const modal = new Modal(modalContainer);
@@ -52,6 +57,8 @@ const orderForm = new OrderForm(cloneTemplate<HTMLFormElement>(orderTemplate), e
 const contactsForm = new ContactsForm(cloneTemplate<HTMLFormElement>(contactsTemplate), events);
 const orderSuccess = new OrderSuccess(cloneTemplate(successTemplate), events);
 
+// ---- Вспомогательная функция ----
+// Создаёт разметку строк корзины из текущего состояния модели.
 function renderBasketCards(): HTMLElement[] {
     return cartModel.getItems().map((product, index) => {
         const card = new CardBasket(cloneTemplate(cardBasketTemplate), {
@@ -61,6 +68,12 @@ function renderBasketCards(): HTMLElement[] {
     });
 }
 
+// ================================================================
+// СОБЫТИЯ МОДЕЛЕЙ ДАННЫХ
+// Представление перерисовывается только здесь.
+// ================================================================
+
+// Каталог товаров обновлён — перерисовать галерею и счётчик.
 events.on('catalog:changed', () => {
     const cards = catalogModel.getProducts().map((product) => {
         const card = new CardCatalog(cloneTemplate(cardCatalogTemplate), {
@@ -77,6 +90,7 @@ events.on('catalog:changed', () => {
     header.render({ counter: cartModel.getItemCount() });
 });
 
+// Выбранный для просмотра товар изменился — открыть или закрыть предпросмотр.
 events.on('preview:changed', () => {
     const product = catalogModel.getSelectedProduct();
     if (!product) {
@@ -99,23 +113,13 @@ events.on('preview:changed', () => {
     modal.open();
 });
 
-events.on('preview:button-click', () => {
-    const product = catalogModel.getSelectedProduct();
-    if (product) {
-        if (cartModel.hasItem(product.id)) {
-            cartModel.removeItem(product);
-        } else {
-            cartModel.addItem(product);
-        }
-        modal.close();
-    }
-});
-
+// Состав корзины изменился — обновить счётчик и список товаров в корзине.
 events.on('cart:changed', () => {
     header.render({ counter: cartModel.getItemCount() });
     basket.render({ items: renderBasketCards(), total: cartModel.getTotalPrice() });
 });
 
+// Данные покупателя изменились — обновить валидность и ошибки обеих форм.
 events.on('buyer:changed', () => {
     const errors = buyerModel.validate();
     const buyer = buyerModel.getData();
@@ -133,15 +137,36 @@ events.on('buyer:changed', () => {
     });
 });
 
+// ================================================================
+// СОБЫТИЯ ПРЕДСТАВЛЕНИЯ
+// Презентер вызывает методы моделей, не генерирует события сам.
+// ================================================================
+
+// Пользователь открыл корзину.
 events.on('basket:open', () => {
     modal.render({ content: basket.render() });
     modal.open();
 });
 
+// Пользователь нажал на карточку в галерее.
 events.on<{ id: string }>('card:select', ({ id }) => {
     catalogModel.setSelectedProduct(catalogModel.getProductById(id) ?? null);
 });
 
+// Пользователь нажал кнопку в предпросмотре товара.
+events.on('preview:button-click', () => {
+    const product = catalogModel.getSelectedProduct();
+    if (product) {
+        if (cartModel.hasItem(product.id)) {
+            cartModel.removeItem(product);
+        } else {
+            cartModel.addItem(product);
+        }
+        modal.close();
+    }
+});
+
+// Пользователь нажал кнопку удаления в корзине.
 events.on<{ id: string }>('cart:remove', ({ id }) => {
     const product = catalogModel.getProductById(id);
     if (product) {
@@ -149,22 +174,27 @@ events.on<{ id: string }>('cart:remove', ({ id }) => {
     }
 });
 
+// Пользователь нажал «Оформить» в корзине.
 events.on('basket:checkout', () => {
     modal.render({ content: orderForm.render() });
 });
 
+// Пользователь изменил способ оплаты или адрес доставки.
 events.on<{ field: string; value: string }>('order:change', ({ field, value }) => {
     buyerModel.setData({ [field]: value } as Parameters<typeof buyerModel.setData>[0]);
 });
 
+// Пользователь нажал «Далее» в форме заказа.
 events.on('order:submit', () => {
     modal.render({ content: contactsForm.render() });
 });
 
+// Пользователь изменил email или телефон.
 events.on<{ field: string; value: string }>('contacts:change', ({ field, value }) => {
     buyerModel.setData({ [field]: value } as Parameters<typeof buyerModel.setData>[0]);
 });
 
+// Пользователь нажал «Оплатить».
 events.on('contacts:submit', () => {
     const buyer = buyerModel.getData();
     communication
@@ -181,10 +211,14 @@ events.on('contacts:submit', () => {
         .catch((err) => console.error('Ошибка оформления заказа:', err));
 });
 
+// Пользователь нажал «За новыми покупками!».
 events.on('success:close', () => {
     modal.close();
 });
 
+// ================================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ================================================================
 communication
     .fetchProducts()
     .then((response) => catalogModel.setProducts(response.items))
